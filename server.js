@@ -2,6 +2,11 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+const { ElevenLabsClient } = require("@elevenlabs/elevenlabs-js");
+const elevenlabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVENLABS_API_KEY,
+});
+
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -19,7 +24,7 @@ app.get("/", (req, res) => {
 
 
 // Text-to-Speech API
-app.post("/api/tts", (req, res) => {
+app.post("/api/tts", async (req, res) => {
   const { text, language, voice } = req.body;
 
   if (!text || !text.trim()) {
@@ -33,12 +38,33 @@ app.post("/api/tts", (req, res) => {
   console.log("Language:", language);
   console.log("Voice:", voice);
 
-  res.json({
-    message: "TTS request received successfully",
-    text,
-    language,
-    voice,
-  });
+  try {
+    const audio = await elevenlabs.textToSpeech.convert(voice, {
+      text: text,
+      modelId: "eleven_multilingual_v2",
+    });
+
+    res.set({
+      "Content-Type": "audio/mpeg",
+      "Content-Disposition": "inline",
+    });
+
+    const chunks = [];
+
+    for await (const chunk of audio) {
+      chunks.push(chunk);
+    }
+
+    const audioBuffer = Buffer.concat(chunks);
+
+    res.send(audioBuffer);
+  } catch (error) {
+    console.error("ElevenLabs TTS Error:", error);
+
+    res.status(500).json({
+      error: error.message || "Failed to generate speech",
+    });
+  }
 });
 
 // Start server
