@@ -1,8 +1,11 @@
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
+
 const { ElevenLabsClient } = require("@elevenlabs/elevenlabs-js");
+
 const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
@@ -10,6 +13,34 @@ const elevenlabs = new ElevenLabsClient({
 const app = express();
 
 const PORT = process.env.PORT || 5000;
+
+const MAX_CHARACTERS = 5000;
+const ttsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  message: {
+    error: "Too many TTS requests. Please try again later.",
+  },
+});
+
+// Available voices
+const voices = [
+  {
+    id: "CwhRBWXzGAHq8TQ4Fs17",
+    name: "Male Voice",
+    language: "en-US",
+    gender: "Male",
+  },
+  {
+    id: "hpp4J3VqNfWAUOO0d1Us",
+    name: "Female Voice",
+    language: "en-US",
+    gender: "Female",
+  },
+];
+
+// Supported languages
+const supportedLanguages = ["en-US"];
 
 // Middleware
 app.use(cors());
@@ -25,37 +56,55 @@ app.get("/", (req, res) => {
 // Get available voices
 app.get("/api/voices", (req, res) => {
   res.json({
-    voices: [
-      {
-        id: "CwhRBWXzGAHq8TQ4Fs17",
-        name: "Male Voice",
-        language: "en-US",
-        gender: "Male",
-      },
-      {
-        id: "hpp4J3VqNfWAUOO0d1Us",
-        name: "Female Voice",
-        language: "en-US",
-        gender: "Female",
-      },
-    ],
+    voices,
   });
 });
 
 // Text-to-Speech API
-app.post("/api/tts", async (req, res) => {
+app.post("/api/tts", ttsLimiter, async (req, res) => {
   const { text, language, voice } = req.body;
 
+  // Validate text
   if (!text || !text.trim()) {
     return res.status(400).json({
       error: "Text is required",
     });
   }
 
+  // Validate maximum characters
+  if (text.length > MAX_CHARACTERS) {
+    return res.status(400).json({
+      error: `Text cannot exceed ${MAX_CHARACTERS} characters.`,
+    });
+  }
+
+  // Validate language
+  if (!supportedLanguages.includes(language)) {
+    return res.status(400).json({
+      error: "Unsupported language.",
+    });
+  }
+
+  // Validate voice
+  const selectedVoice = voices.find((item) => item.id === voice);
+
+  if (!selectedVoice) {
+    return res.status(400).json({
+      error: "Invalid voice.",
+    });
+  }
+
+  // Validate voice and language combination
+  if (selectedVoice.language !== language) {
+    return res.status(400).json({
+      error: "Selected voice is not available for this language.",
+    });
+  }
+
   console.log("TTS Request:");
   console.log("Text:", text);
   console.log("Language:", language);
-  console.log("Voice:", voice);
+  console.log("Voice:", selectedVoice.name);
 
   try {
     const audio = await elevenlabs.textToSpeech.convert(voice, {
