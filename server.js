@@ -22,6 +22,25 @@ app.get("/", (req, res) => {
   });
 });
 
+// Get available voices
+app.get("/api/voices", (req, res) => {
+  res.json({
+    voices: [
+      {
+        id: "CwhRBWXzGAHq8TQ4Fs17",
+        name: "Male Voice",
+        language: "en-US",
+        gender: "Male",
+      },
+      {
+        id: "hpp4J3VqNfWAUOO0d1Us",
+        name: "Female Voice",
+        language: "en-US",
+        gender: "Female",
+      },
+    ],
+  });
+});
 
 // Text-to-Speech API
 app.post("/api/tts", async (req, res) => {
