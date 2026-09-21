@@ -28,19 +28,27 @@ const voices = [
   {
     id: "CwhRBWXzGAHq8TQ4Fs17",
     name: "Male Voice",
-    language: "en-US",
+    
     gender: "Male",
   },
   {
     id: "hpp4J3VqNfWAUOO0d1Us",
     name: "Female Voice",
-    language: "en-US",
+    
     gender: "Female",
   },
 ];
 
 // Supported languages
-const supportedLanguages = ["en-US"];
+const supportedLanguages = [
+  "en-US",
+  "hi-IN",
+  "kn-IN",
+  "de-DE",
+  "sv-SE",
+  "es-ES",
+  "fr-FR",
+];
 
 // Middleware
 app.use(cors());
@@ -95,12 +103,7 @@ app.post("/api/tts", ttsLimiter, async (req, res) => {
   }
 
   // Validate voice and language combination
-  if (selectedVoice.language !== language) {
-    return res.status(400).json({
-      error: "Selected voice is not available for this language.",
-    });
-  }
-
+  
   console.log("TTS Request:");
   console.log("Text:", text);
   console.log("Language:", language);
